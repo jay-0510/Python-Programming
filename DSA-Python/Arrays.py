@@ -45,3 +45,6 @@ print(a)
 # removes an element at the specified index from the array, and returns the removed element.
 a.pop(9)
 print(a)
+
+
+#All the features of ARRAYS are included.
