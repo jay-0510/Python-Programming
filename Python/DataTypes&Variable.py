@@ -33,3 +33,5 @@ print(tuple1)
 
 dict1 = {"name": "MASTER", "age": 20, "canVote": True}
 print(dict1)
+
+#END!!!

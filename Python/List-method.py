@@ -37,7 +37,7 @@ print(CARS + CARS2)
 
 #INSERT()
 'This method inserts an item at the given index. User has to specify index and the item to be inserted within the insert() method.'
-marvels = ["superman", "batman", "hulk"]
+marvels = ["superman", "batman", "hulk", "THOR"]
 #           [0]        [1]      [2]
 marvels.insert(1, "spiderman")   
 print(marvels)
