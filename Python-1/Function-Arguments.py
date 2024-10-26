@@ -10,7 +10,7 @@ Required Arguments'''
 #KEYWORD ARGUMENTS:
 "We can provide arguments with key = value, this way the interpreter recognizes the arguments by the parameter name. Hence, the the order in which the arguments are passed does not matter."
 
-#REQUIRED ARGUMENTS :
+#REQUIRED ARGUMENTS:
 "In case we don’t pass the arguments with a key = value syntax, then it is necessary to pass the arguments in the correct positional order and the number of arguments passed should match with actual function definition."
 
 #RETURN STATEMENT :
