@@ -28,3 +28,5 @@
 
 # Deleting a directory
 # shutil.rmtree("dir")
+
+#ADVANCED IMP CONCEPT!!!
