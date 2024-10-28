@@ -1,6 +1,6 @@
 # Pandas
-import numpy as np
-import pandas as pd
+import numpy as np # type: ignore
+import pandas as pd # type: ignore
 
 # Creating and initializing a nested list
 age = [['Aman', 95.5, "Male"], ['Sunny', 65.7, "Female"],

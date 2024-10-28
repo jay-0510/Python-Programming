@@ -24,7 +24,7 @@ print_first_n_primes(10)
 
 
 #python program to multiply matrices
-import numpy as np
+import numpy as np # type: ignore
 def multiply_matrices(matrix1, matrix2):
     result = np.dot(matrix1, matrix2)
     return result
@@ -50,4 +50,3 @@ print("\nResultant Matrix:")
 print(result_matrix)
 
 
-#string countation 
