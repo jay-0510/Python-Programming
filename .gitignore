@@ -1,0 +1,9 @@
+.DS_Store
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+env/
+ENV/
+venv/
+env.bak/
