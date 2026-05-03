@@ -7,3 +7,5 @@ env/
 ENV/
 venv/
 env.bak/
+.DS_Store
+.idea/
