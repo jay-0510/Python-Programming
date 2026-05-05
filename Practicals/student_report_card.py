@@ -18,7 +18,16 @@ class Student:
         print("Marks :", self.marks)
         print("Grade :", self.grade)
         print("Average: ", self.calculate_average())
-        
+
+class MLStudent (Student):
+    def __init__ (self, name, marks, grade, project_score):
+        super().__init__(name,marks,grade)
+        self.project_score = project_score   # Instance Attributes 
+    
+    def display_report(self):
+        super().display_report()
+        print("Project Score :", self.project_score)
+    
 # Object creation - har baar __init__ automatically runs
 stu1 = Student("Jay", [85, 90, 78], "B")
 stu1.display_report()   # calling method on stu1's data
@@ -28,3 +37,7 @@ stu2.display_report()     # same method, different data - that's OOPs magic
 
 stu3 = Student("Kavya", [], "X")
 stu3.display_report()   # Zero Division Error - bcoz len[] is 0
+
+# ML Student 
+ml1 = MLStudent("Dhrishi", [90, 96, 93], "A", 98)
+ml1.display_report()
