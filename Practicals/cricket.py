@@ -1,15 +1,23 @@
-class Cricketer:
-    # Blueprint for every cricketer
-    # Instance attributes - unique to each object
-    def __init__(self, name, matches, runs):
+class Cricketer:       # Blueprint for every cricketer
+
+    total_cricketer = 0  # Class Attributes - shared by all objects
+
+    def __init__(self, name, matches, runs):  # Instance attributes - unique to each object
         self.name = name
         self.matches = matches
         self.runs = runs
+        Cricketer.total_cricketer += 1
 
     # Instance method - uses self to access object's own data
     def cric_avg(self):
-        if not self.runs:        # edge case - empty list crash rokta hai
+        if not self.runs:
             return 0
+        # Use len(self.runs) - actual recorded innings
+        # NOT self.matches - that's user input, can be wrong
+        # Add a warning if data looks inconsistent
+        if len(self.runs) != self.matches:
+            print(
+                f" Warning: {self.name} - matches={self.matches} but only {len(self.runs)} innings recorded")
         return sum(self.runs) / len(self.runs)
 
     # display_profile - parent version, prints basic cricketer info
@@ -46,7 +54,10 @@ class Team:
         self.players = []          # empty list, players baad mein aayenge
 
     def add_player(self, player):
-        self.players.append(player)    # list mein player add karo
+        if isinstance(player, Cricketer):
+            self.players.append(player)    # list mein player add karo
+        else:
+            print(f"Invalid player - only Cricketer objects allowed")
 
     def top_score(self):
         if not self.players:
@@ -66,9 +77,24 @@ class Team:
             player.display_profile()   # Polymorphism in action
             print()                    # blank line between players
 
+# Add List Comprehension Challenge --
+
+    def top_performer(self):
+        top = [player for player in self.players if player.cric_avg() > 40]
+        for player in top:
+            print(player.name, "Avg:", player.cric_avg())
+
+# Add Leaderboard chart
+    def leaderboard(self):
+        ranked = sorted(
+            self.players, key=lambda player: player.cric_avg(), reverse=True)
+        print(f"\n--- {self.team_name} Leaderboard ---")
+        for i, player in enumerate(ranked, 1):    # ✅ method ke andar
+            print(f"{i}. {player.name} | Avg: {player.cric_avg()}")
+
 
 # Object creation - har baar __init__ automatically runs
-cric1 = Cricketer("Rohit Sharma", 45, [
+cric1 = Cricketer("Rohit Sharma", 10, [
                   82, 53, 120, 83, 67, 90, 55, 110, 23, 78])
 cric1.display_profile()
 
@@ -87,3 +113,15 @@ india.display_squad()
 print("Top Scorer:", india.top_score().name)
 print("Team Average:", india.team_average())
 print(india.top_score())
+
+# Challenge - 7
+india.add_player("Rohit Sharma")  # string
+india.add_player(42)              # number
+# india.add_player(ar1)             # AllRounder - should work
+
+# Challenge - 8
+print("--- Top Performers ---")
+india.top_performer()
+
+# Challnege - 9
+india.leaderboard()
