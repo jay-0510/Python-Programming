@@ -1,0 +1,532 @@
+== == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == ==
+  NOTIFICATION SYSTEM — ALL 8 DESIGN PATTERNS
+  PSEUDO CODE — Interview Ready
+
+  Scenario:
+  User order place kare → system decide kare ke notification
+  kevi rite moklave — Email, SMS, ya Push.
+  Android/iOS alag, Gmail hoy ke na hoy alag, UI alag.
+== == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == ==
+
+
+== == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == ==
+  PATTERN 1 — FACTORY METHOD
+  Gujarati: "Shu banavu?" — Factory decide kare which type
+
+  Interview line:
+  "Factory Method is used when you want to delegate the
+   responsibility of object creation to a subclass or a
+   central factory, so the caller never uses 'new' directly."
+================================================================
+
+INTERFACE Notification:
+    METHOD send(message)         // Every type MUST implement this
+
+
+CLASS EmailNotification IMPLEMENTS Notification:
+    METHOD send(message):
+        print "Send via Email → message"
+
+CLASS SMSNotification IMPLEMENTS Notification:
+    METHOD send(message):
+        print "Send via SMS → message"
+
+CLASS PushNotification IMPLEMENTS Notification:
+    METHOD send(message):
+        print "Send via Push → message"
+
+
+// Factory — ek jagya decide kare shu banavu
+CLASS NotificationFactory:
+    STATIC METHOD create(type) → Notification:
+        IF type == "email" → RETURN new EmailNotification
+        IF type == "sms"   → RETURN new SMSNotification
+        IF type == "push"  → RETURN new PushNotification
+        ELSE → THROW error "Unknown type"
+
+
+// Usage
+n = NotificationFactory.create("email")
+n.send("Tamaro order place thayo!")
+
+// WHY:
+// "email" → factory andar jaay, EmailNotification bane
+// Caller ne khabar nathi andar shu thay — sirf result male
+// Navo type (WhatsApp) add karvo? → Bas factory ma 1 line add karo
+// Baaki koi code change nahi
+
+
+================================================================
+  PATTERN 2 — ABSTRACT FACTORY
+  Gujarati: "Family sathe banavu?" — Matching set banavo
+  
+  Interview line:
+  "Abstract Factory creates families of related objects.
+   It guarantees that objects from the same factory are
+   compatible with each other — you can't accidentally mix
+   an Android UI with an iOS alert style."
+================================================================
+
+// Product Family 1 — UI Style
+INTERFACE NotificationUI:
+    METHOD show()
+
+CLASS AndroidUI IMPLEMENTS NotificationUI:
+    METHOD show(): print "Material Design card — top drawer"
+
+CLASS IOSUI IMPLEMENTS NotificationUI:
+    METHOD show(): print "Banner style — top, auto dismiss"
+
+
+// Product Family 2 — Alert Style
+INTERFACE AlertStyle:
+    METHOD alert()
+
+CLASS AndroidAlert IMPLEMENTS AlertStyle:
+    METHOD alert(): print "Vibration + LED blink"
+
+CLASS IOSAlert IMPLEMENTS AlertStyle:
+    METHOD alert(): print "Haptic feedback + chime"
+
+
+// Abstract Factory Interface — defines WHAT to produce, not HOW
+INTERFACE OSNotificationFactory:
+    METHOD create_ui()    → NotificationUI
+    METHOD create_alert() → AlertStyle
+
+// Concrete Factory 1 — Android family
+CLASS AndroidFactory IMPLEMENTS OSNotificationFactory:
+    METHOD create_ui()    → RETURN new AndroidUI
+    METHOD create_alert() → RETURN new AndroidAlert
+
+// Concrete Factory 2 — iOS family
+CLASS IOSFactory IMPLEMENTS OSNotificationFactory:
+    METHOD create_ui()    → RETURN new IOSUI
+    METHOD create_alert() → RETURN new IOSAlert
+
+
+// Client — works with ANY factory, always gets matching family
+FUNCTION deliver_notification(factory, message):
+    ui    = factory.create_ui()     // same factory → guaranteed match
+    alert = factory.create_alert()
+    ui.show()
+    alert.alert()
+
+
+// Usage
+deliver_notification(new AndroidFactory(), "Order confirm thayo!")
+deliver_notification(new IOSFactory(),     "Order confirm thayo!")
+
+// WHY:
+// Android UI + Android Alert — always together, never mixed
+// iOS UI + iOS Alert — always together
+// New OS aavyu (Windows Phone)? → Bas navi factory class banavo
+// deliver_notification() function change nahi thay — EVER
+
+
+================================================================
+  PATTERN 3 — BUILDER
+  Gujarati: "Step by step banavu?" — Piece by piece choose karo
+  
+  Interview line:
+  "Builder is used when an object has many optional fields.
+   Instead of one constructor with 10 parameters, you set
+   only what you need, step by step, and call build() at end."
+================================================================
+
+// Product — complex object with many optional fields
+CLASS NotificationMessage:
+    title   = null
+    body    = null
+    image   = null      // OPTIONAL — SMS ne nathi joitu
+    action  = null      // OPTIONAL — button in notification
+
+
+// Builder — ek ek step set karo, return self for chaining
+CLASS NotificationBuilder:
+    notif = new NotificationMessage()
+
+    METHOD set_title(title):
+        notif.title = title
+        RETURN self             // return self → chaining enable kare
+
+    METHOD set_body(body):
+        notif.body = body
+        RETURN self
+
+    METHOD set_image(url):
+        notif.image = url       // call only when image joiti hoy
+        RETURN self
+
+    METHOD set_action(label):
+        notif.action = label    // call only when button joito hoy
+        RETURN self
+
+    METHOD build() → NotificationMessage:
+        RETURN notif            // final object return karo
+
+
+// Usage — Method Chaining (the key feature of Builder)
+// Simple SMS — sirf 2 fields
+sms = NotificationBuilder()
+        .set_title("OTP")
+        .set_body("Tamaro OTP: 482910")
+        .build()
+
+// Rich Push — badha fields
+push = NotificationBuilder()
+        .set_title("Order Placed!")
+        .set_body("Tamaro order 30 min ma aavse.")
+        .set_image("https://img/order.png")     // optional — set karyu
+        .set_action("Track Order")              // optional — set karyu
+        .build()
+
+// WHY:
+// Without Builder → new Notification("OTP", "482910", null, null)
+//                   null shu che? Count karo. Error-prone.
+// With Builder    → crystal clear. Sirf jo joie te set karo.
+// 'return self' j chaining possible banave — remove karo toh chain tute
+
+
+================================================================
+  PATTERN 4 — ADAPTER
+  Gujarati: "Fit karvu?" — Juna API ne nava system sathe jodo
+  
+  Interview line:
+  "Adapter is a structural pattern that allows incompatible
+   interfaces to work together. Like a power plug adapter —
+   you don't change the wall socket or your laptop, you add
+   an adapter in between."
+================================================================
+
+// Juno API — change nahi kari shakta (3rd party / legacy)
+CLASS OldSMSAPI:
+    METHOD send_text(phone, text):      // alag method name, alag signature
+        print "OLD API → phone: text"
+
+
+// New system expect kare Notification interface
+INTERFACE Notification:
+    METHOD send(message)                // new signature
+
+
+// Adapter — juna API ne nava interface ma wrap karo
+CLASS SMSAdapter IMPLEMENTS Notification:
+    phone   = ""
+    old_api = new OldSMSAPI()          // juna API ne andar rakho
+
+    CONSTRUCTOR(phone):
+        this.phone = phone
+
+    METHOD send(message):              // new interface
+        old_api.send_text(phone, message)   // internally juna API call karo
+        // Caller ne khabar nathi ke andar junu API vaperay che
+
+
+// Usage — caller sirf new interface use kare
+sms = new SMSAdapter("+91-9876543210")
+sms.send("Order confirm thayo!")       // new call → old API internally
+
+// WHY:
+// OldSMSAPI change nahi kari shakta — maybe 3rd party library che
+// New code ma OldSMSAPI directly use nahi kari shakta — interface alag
+// Adapter bridge bane chhe — banne side unchanged, adapter kaam kare
+// Real world: payment gateway integration, legacy database drivers
+
+
+================================================================
+  PATTERN 5 — STRATEGY
+  Gujarati: "Kai rite karvu?" — Tarika runtime ma badlo
+  
+  Interview line:
+  "Strategy defines a family of algorithms, encapsulates each
+   one, and makes them interchangeable at runtime. The client
+   doesn't change — only the strategy plugged into it changes."
+================================================================
+
+// Strategy Interface — common contract for all sending algorithms
+INTERFACE SendStrategy:
+    METHOD send(message)
+
+// Concrete Strategies — alag alag tarika, same result
+CLASS SendViaEmail IMPLEMENTS SendStrategy:
+    METHOD send(message): print "Email → message"
+
+CLASS SendViaSMS IMPLEMENTS SendStrategy:
+    METHOD send(message): print "SMS → message"
+
+CLASS SendViaPush IMPLEMENTS SendStrategy:
+    METHOD send(message): print "Push → message"
+
+
+// Context — strategy hold kare, runtime ma swap kari shake
+CLASS NotificationSender:
+    strategy = null
+
+    CONSTRUCTOR(strategy):
+        this.strategy = strategy        // inject which strategy to use
+
+    METHOD change_strategy(strategy):
+        this.strategy = strategy        // swap at runtime — no code change
+
+    METHOD notify(message):
+        strategy.send(message)          // delegates to current strategy
+
+
+// Usage
+sender = new NotificationSender(new SendViaEmail())
+sender.notify("Order placed!")          // Gmail varo user → Email
+
+sender.change_strategy(new SendViaSMS())
+sender.notify("Order placed!")          // Gmail nathi → SMS
+
+sender.change_strategy(new SendViaPush())
+sender.notify("Order placed!")          // App che → Push
+
+// WHY:
+// Without Strategy → if gmail: email elif app: push elif: sms
+//                    har jagya aa if/elif repeat thay
+// With Strategy    → swap karo, baaki code same
+// Factory vs Strategy: Factory = WHAT to create. Strategy = HOW to behave.
+
+
+================================================================
+  PATTERN 6 — OBSERVER
+  Gujarati: "Badha ne khaber?" — Event thay etle auto notify
+  
+  Interview line:
+  "Observer defines a one-to-many dependency. When one object
+   (Subject) changes state, all its dependents (Observers) are
+   notified automatically. The subject doesn't know who listens."
+================================================================
+
+// Observer Interface — har koi implement kare
+INTERFACE NotificationObserver:
+    METHOD update(event, data)
+
+// Concrete Observers — alag alag reaction
+CLASS EmailObserver IMPLEMENTS NotificationObserver:
+    METHOD update(event, data):
+        print "EMAIL: event fired → send data via email"
+
+CLASS SMSObserver IMPLEMENTS NotificationObserver:
+    METHOD update(event, data):
+        print "SMS: event fired → send data via SMS"
+
+CLASS PushObserver IMPLEMENTS NotificationObserver:
+    METHOD update(event, data):
+        print "PUSH: event fired → send data via Push"
+
+
+// Subject — event fire kare, observers ne notify kare
+CLASS OrderSystem:
+    observers = []                          // subscriber list
+
+    METHOD subscribe(observer):
+        observers.add(observer)             // join karo
+
+    METHOD unsubscribe(observer):
+        observers.remove(observer)          // leave karo
+
+    METHOD place_order(item):
+        print "Order placed: item"
+        notify_all("ORDER_PLACED", item + " confirm thayo!")
+
+    PRIVATE METHOD notify_all(event, data):
+        FOR each observer in observers:
+            observer.update(event, data)    // badha ne khaber paado
+
+
+// Usage
+system = new OrderSystem()
+system.subscribe(new EmailObserver())   // Email system listening
+system.subscribe(new SMSObserver())     // SMS system listening
+system.subscribe(new PushObserver())    // Push system listening
+
+system.place_order("iPhone 16")
+// → EmailObserver fires
+// → SMSObserver fires
+// → PushObserver fires
+// OrderSystem ne khabar nathi katle observers che — loose coupling
+
+// WHY:
+// OrderSystem ane EmailService tightly coupled nahi
+// Navo observer (WhatsApp) add karvo? → bas subscribe karo
+// Real world: React state updates, event listeners, pub-sub systems
+
+
+================================================================
+  PATTERN 7 — STATE
+  Gujarati: "Hu kyaa chu?" — Current state upar depend kare behaviour
+  
+  Interview line:
+  "State pattern allows an object to alter its behavior when
+   its internal state changes. Instead of if/else chains based
+   on state, each state is its own class that handles behavior."
+================================================================
+
+// State Interface
+INTERFACE UserState:
+    METHOD notify(context, message)
+
+// Concrete States — har state jaane shu karvu
+CLASS HasGmailState IMPLEMENTS UserState:
+    METHOD notify(context, message):
+        print "Gmail che → Email mokyo: message"
+        // State badli shake here if needed
+        // e.g., context.change_state(new HasAppState())
+
+CLASS HasAppState IMPLEMENTS UserState:
+    METHOD notify(context, message):
+        print "App che, Gmail nathi → Push mokyo: message"
+
+CLASS NoChannelState IMPLEMENTS UserState:
+    METHOD notify(context, message):
+        print "Koi nathi → SMS mokyo: message"
+
+
+// Context — state hold kare, delegate kare
+CLASS UserNotifier:
+    state = null
+
+    CONSTRUCTOR(initial_state):
+        this.state = initial_state
+
+    METHOD change_state(new_state):
+        this.state = new_state          // runtime state switch
+
+    METHOD notify(message):
+        state.notify(this, message)     // current state handle kare
+
+
+// Usage
+user = new UserNotifier(new HasGmailState())
+user.notify("Order confirm thayo!")     // → Email
+
+user.change_state(new HasAppState())    // user logout from Gmail
+user.notify("Order confirm thayo!")     // → Push
+
+user.change_state(new NoChannelState()) // app pan uninstall
+user.notify("Order confirm thayo!")     // → SMS
+
+// WHY:
+// Without State → if state=="gmail": email elif state=="app": push elif...
+//                 har method ma aa if/elif repeat thay — nightmare
+// With State    → har state class jaane apnu behaviour
+//                 context clean rahe, state class swap thay
+// Strategy vs State:
+//   Strategy = algorithm swap karo (tame decide karo from outside)
+//   State    = object khud j apni state badlay andar thi
+
+
+================================================================
+  PATTERN 8 — BRIDGE
+  Gujarati: "Alag vadhvu?" — Type ane Platform independently grow karo
+  
+  Interview line:
+  "Bridge separates abstraction from implementation so both
+   can vary independently. Without Bridge, adding N notification
+   types and M platforms means N×M classes. With Bridge: N+M."
+================================================================
+
+// WITHOUT BRIDGE — class explosion problem:
+// AndroidEmail, AndroidSMS, AndroidPush = 3 classes
+// iOSEmail, iOSSMS, iOSPush             = 3 more classes
+// New platform aavyu (HarmonyOS)?       = 3 more
+// = N types × M platforms classes — scales badly
+
+
+// WITH BRIDGE — separate both sides:
+
+// Implementation Side — Platform (can grow independently)
+INTERFACE Platform:
+    METHOD deliver(message)
+
+CLASS AndroidPlatform IMPLEMENTS Platform:
+    METHOD deliver(message):
+        print "Android Material UI → message"
+
+CLASS IOSPlatform IMPLEMENTS Platform:
+    METHOD deliver(message):
+        print "iOS Banner UI → message"
+
+
+// Abstraction Side — Notification Type (can grow independently)
+// Platform inject thay through constructor — this is the BRIDGE
+CLASS BridgeNotification:
+    platform = null
+
+    CONSTRUCTOR(platform):
+        this.platform = platform        // bridge — platform inject karo
+
+    METHOD send(message):
+        raise NotImplementedError
+
+CLASS BridgeEmail EXTENDS BridgeNotification:
+    METHOD send(message):
+        print "Email: "
+        platform.deliver(message)       // delegates to injected platform
+
+CLASS BridgeSMS EXTENDS BridgeNotification:
+    METHOD send(message):
+        print "SMS: "
+        platform.deliver(message)
+
+CLASS BridgePush EXTENDS BridgeNotification:
+    METHOD send(message):
+        print "Push: "
+        platform.deliver(message)
+
+
+// Usage — mix and match freely
+android_email = new BridgeEmail(new AndroidPlatform())
+android_email.send("Order confirm thayo!")  // Email on Android
+
+ios_email = new BridgeEmail(new IOSPlatform())
+ios_email.send("Order confirm thayo!")      // Email on iOS
+
+ios_push = new BridgePush(new IOSPlatform())
+ios_push.send("Delivery nikli!")            // Push on iOS
+
+// WHY:
+// New platform aavyu? → Bas 1 Platform class banavo — done
+// New notification type? → Bas 1 BridgeNotification class banavo — done
+// Banne sides alag alag vadhay — no cross-impact
+
+// Adapter vs Bridge:
+//   Adapter = AFTER problem aavyu — juna code ne fit karvo (retrofit)
+//   Bridge  = BEFORE design karo — pehla thi j separate rakho (proactive)
+
+
+================================================================
+  FINAL CHEAT SHEET — Interview ma bolvu hoy toh
+================================================================
+
+FACTORY METHOD    | "Shu banavu?"        | Factory create kare — caller nahi
+ABSTRACT FACTORY  | "Family sathe?"      | Matching set guarantee — Android/iOS
+BUILDER           | "Step by step?"      | Optional fields piece by piece
+ADAPTER           | "Fit karvu?"         | Juna interface ne nava sathe bridge
+STRATEGY          | "Kai rite karvu?"    | Algorithm runtime ma swap — context same
+OBSERVER          | "Badha ne khaber?"   | Event fire → all subscribers auto-notify
+STATE             | "Hu kyaa chu?"       | State badlay → behaviour badlay — no if/else
+BRIDGE            | "Alag vadhvu?"       | Type + Platform — N+M instead of N×M
+
+================================================================
+  KEY CONFUSIONS TO CLEAR IN INTERVIEW
+================================================================
+
+Q: Factory vs Abstract Factory?
+A: Factory = 1 product banavo.
+   Abstract Factory = compatible family of products banavo.
+
+Q: Strategy vs State?
+A: Strategy = tame bahar thi algorithm swap karo.
+   State = object khud j andar thi state badlay.
+
+Q: Adapter vs Bridge?
+A: Adapter = juna broken fit ne fix karo (after the fact).
+   Bridge = pehla thi j design — banne side alag rakho.
+
+Q: Observer vs Strategy?
+A: Observer = "event thayo — badha ne khaber do" (1 to many).
+   Strategy = "aa kaam aa rite kar" (1 algorithm swap).
