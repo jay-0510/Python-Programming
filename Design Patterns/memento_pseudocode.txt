@@ -1,0 +1,193 @@
+================================================================
+  MEMENTO PATTERN — PSEUDO CODE
+  Notification Settings ma Undo/Restore
+  
+  Gujarati: "Pachhu jaavu hoy toh?" — Jeva hata teva karo
+  
+  Scenario:
+  User potana notification settings configure kare che —
+  Email on/off, SMS on/off, Push on/off, DND mode, frequency.
+  
+  User accidentally badhu off kari de, ya experiment kare.
+  "Undo" karo → pachi jeva hata teva settings aavi jaay.
+  
+  WHY this pattern:
+  Tame bahar thi object na internal variables read karva jao
+  toh encapsulation tute — object na private parts expose thay.
+  Memento ma object KHUD j apni state save kare — opaque snapshot.
+  Bahar koi read/modify nahi kari shake. Sirf hold kari shake.
+================================================================
+
+
+================================================================
+  STEP 1 — MEMENTO (The Snapshot)
+  Sirf state hold kare. Koi logic nahi. Koi method nahi.
+  Bahar koi read nahi kari shake — opaque box.
+================================================================
+
+CLASS NotificationMemento:
+    // Private — bahar thi access nahi
+    PRIVATE email_on   = null
+    PRIVATE sms_on     = null
+    PRIVATE push_on    = null
+    PRIVATE dnd_mode   = null
+    PRIVATE frequency  = null
+
+    CONSTRUCTOR(email_on, sms_on, push_on, dnd_mode, frequency):
+        this.email_on  = email_on      // state copy karke andar rakho
+        this.sms_on    = sms_on
+        this.push_on   = push_on
+        this.dnd_mode  = dnd_mode
+        this.frequency = frequency
+
+    // No public getters for individual fields
+    // Only the Originator knows how to read this — by design
+
+
+================================================================
+  STEP 2 — ORIGINATOR (Notification Settings — the real object)
+  Potani state save kare, ane restore pan kare.
+  Aa object j jaane apni andar shu che.
+================================================================
+
+CLASS NotificationSettings:        // ← Originator
+    email_on  = true
+    sms_on    = true
+    push_on   = true
+    dnd_mode  = false
+    frequency = "instant"
+
+    // State change karva na methods
+    METHOD toggle_email():   email_on  = NOT email_on
+    METHOD toggle_sms():     sms_on    = NOT sms_on
+    METHOD toggle_push():    push_on   = NOT push_on
+    METHOD enable_dnd():     dnd_mode  = true
+    METHOD set_frequency(f): frequency = f
+
+    // SAVE — apni state ni snapshot banavo
+    METHOD save() → NotificationMemento:
+        RETURN new NotificationMemento(
+            email_on, sms_on, push_on, dnd_mode, frequency
+        )
+        // Object khud j apni state pack kare — no one else sees it
+
+    // RESTORE — snapshot thi state pachi lavo
+    METHOD restore(memento: NotificationMemento):
+        this.email_on  = memento.email_on     // only originator reads it
+        this.sms_on    = memento.sms_on
+        this.push_on   = memento.push_on
+        this.dnd_mode  = memento.dnd_mode
+        this.frequency = memento.frequency
+
+    METHOD show():
+        print "Email: email_on | SMS: sms_on | Push: push_on"
+        print "DND: dnd_mode   | Frequency: frequency"
+
+
+================================================================
+  STEP 3 — CARETAKER (History Manager)
+  Mementos collect kare — stack ma. Undo handle kare.
+  Andar shu che te nathi jaanta — sirf hold kare.
+================================================================
+
+CLASS NotificationHistory:         // ← Caretaker
+    history = []                   // stack of mementos
+
+    METHOD push(memento):
+        history.add(memento)       // snapshot save karo
+
+    METHOD pop() → NotificationMemento:
+        IF history is empty → RETURN null
+        RETURN history.remove_last()    // last snapshot kado — undo
+
+    METHOD size() → int:
+        RETURN history.length
+
+
+================================================================
+  USAGE — Step by Step Flow
+================================================================
+
+// Setup
+settings = new NotificationSettings()
+history  = new NotificationHistory()
+
+// Initial state
+settings.show()
+// Email: ON | SMS: ON | Push: ON | DND: false | Freq: instant
+
+// --- User changes settings, save before each change ---
+
+// Save checkpoint 1 — before any change
+history.push(settings.save())
+
+settings.toggle_email()          // Email band kari
+settings.enable_dnd()            // DND on kari
+settings.show()
+// Email: OFF | SMS: ON | Push: ON | DND: true | Freq: instant
+
+// Save checkpoint 2
+history.push(settings.save())
+
+settings.toggle_sms()            // SMS pan band kari
+settings.set_frequency("daily")  // frequency badli
+settings.show()
+// Email: OFF | SMS: OFF | Push: ON | DND: true | Freq: daily
+
+// --- Undo — restore last checkpoint ---
+settings.restore(history.pop())
+settings.show()
+// Email: OFF | SMS: ON | Push: ON | DND: true | Freq: instant
+// ← Checkpoint 2 restore thayo
+
+// --- Undo again ---
+settings.restore(history.pop())
+settings.show()
+// Email: ON | SMS: ON | Push: ON | DND: false | Freq: instant
+// ← Checkpoint 1 restore thayo — bilkul original
+
+
+================================================================
+  WHY MEMENTO — Not just "undo button"
+  
+  Without Memento (naive approach):
+    saved = {
+        "email": settings.email_on,     // private state read kari
+        "sms":   settings.sms_on,       // encapsulation tuti
+        "push":  settings.push_on       // bahar ne badhu khabar padyu
+    }
+    // Kal settings ma navo field avyu → aa saving code pan badle
+    // Tight coupling — settings class ane saving code bandha
+  
+  With Memento:
+    snapshot = settings.save()          // object khud pack kare
+    // Bahar koi nathi jaanta andar shu che
+    // Settings class change thay → saving code change nahi thay
+    // Encapsulation 100% intact
+================================================================
+
+
+================================================================
+  FINAL — Interview Ready
+================================================================
+
+MEMENTO PATTERN:
+  Gujarati  : "Pachhu jaavu hoy toh?" — Jeva hata teva karo
+  One-liner : "Memento captures an object's internal state into
+               an opaque snapshot without breaking encapsulation,
+               so it can be restored later."
+  3 players : Originator (saves/restores) |
+              Memento (snapshot — opaque) |
+              Caretaker (holds history — never peeks)
+
+REAL WORLD  : Ctrl+Z in editors | Game save points |
+              Form draft auto-save | DB transactions rollback
+
+KEY POINT   : Caretaker holds the Memento but CANNOT read it.
+              Only Originator can. That's the encapsulation guarantee.
+
+CONFUSION   : Memento vs Command (undo)?
+              Command undo = reverse the action (do the opposite)
+              Memento undo = restore the saved snapshot (go back in time)
+              Command is about actions. Memento is about state.
+================================================================
