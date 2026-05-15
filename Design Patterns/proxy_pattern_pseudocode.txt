@@ -1,0 +1,257 @@
+================================================================
+  PROXY PATTERN — PSEUDO CODE
+  Notification Service ma Access Control, Caching, Logging
+  
+  Gujarati: "Vachhe man rakho?" — Direct nahi, proxy thi jao
+  
+  Scenario:
+  NotificationService ek expensive service che — 
+  database connect kare, rate limits check kare, logs rakhe.
+  
+  Direct access deva thi problems:
+  - Koi pun unlimited notifications mokli shake
+  - Same request bar bar database hit kare
+  - Koi audit trail nathi — kone moklyu, kyare moklyu
+  - Admin-only features normal user access kari shake
+  
+  Proxy vachhe ma muko — real service same rahe, unchanged.
+  
+  WHY this pattern:
+  Real object na core responsibility ma aa badhi 
+  "extra" chijo (auth, cache, log) mix nahi karvi.
+  Proxy aa badhu handle kare — Real object clean rahe.
+================================================================
+
+
+================================================================
+  STEP 1 — SUBJECT INTERFACE
+  Common contract — Proxy ane Real Service banne implement kare.
+  Caller ne khabar nathi ke su vaat kare che — proxy ke real.
+================================================================
+
+INTERFACE NotificationService:
+    METHOD send(user_role, message)    // banne implement karva j padse
+
+
+================================================================
+  STEP 2 — REAL SUBJECT (Actual Service)
+  Real kaam kare. Koi extra logic nathi — clean ane focused.
+  Direct access nathi — Proxy thi j aavvu padse.
+================================================================
+
+CLASS RealNotificationService IMPLEMENTS NotificationService:
+
+    METHOD send(user_role, message):
+        // Actual kaam — DB hit, external API call, etc.
+        print "REAL SERVICE: Notification mokli → message"
+        // Expensive: DB connection, rate limit check, delivery confirm
+
+
+================================================================
+  PROXY TYPE 1 — PROTECTION PROXY
+  "Kaun aavi shake?" — Access control
+  
+  Scenario:
+  "bulk_alert" sirf ADMIN mokli shake.
+  Normal user try kare → block thay.
+  Real service ne khabar pan nathi padti ke koi try karyu.
+================================================================
+
+CLASS ProtectionProxy IMPLEMENTS NotificationService:
+
+    real_service = new RealNotificationService()   // real ne andar rakho
+
+    METHOD send(user_role, message):
+        // Gate check — pehla permission check, pachhi real service
+        IF user_role == "admin":
+            real_service.send(user_role, message)  // allow — forward karo
+        ELSE:
+            print "ACCESS DENIED: Sirf admin mokli shake"
+            // Real service ne call j nahi karo — blocked here
+
+// Usage
+proxy = new ProtectionProxy()
+proxy.send("admin", "System maintenance at 2AM")  // → passes through
+proxy.send("user",  "Free coins!")                // → blocked at proxy
+
+
+================================================================
+  PROXY TYPE 2 — CACHING PROXY
+  "Aapyu hatu — yaad che?" — Same request, same answer, no repeat
+  
+  Scenario:
+  "daily_digest" notification same content che badha users mate.
+  Bar bar real service hit karvani zarur nathi.
+  Proxy first call ma result cache kare — baaki serve kare.
+================================================================
+
+CLASS CachingProxy IMPLEMENTS NotificationService:
+
+    real_service = new RealNotificationService()
+    cache = {}                   // key-value store — message store karo
+
+    METHOD send(user_role, message):
+        IF message IN cache:
+            print "CACHE HIT: Real service call nahi — cache thi serve"
+            RETURN cache[message]                  // direct thi serve
+
+        // Cache miss — real service call karo, result store karo
+        result = real_service.send(user_role, message)
+        cache[message] = result                    // future mate store
+        RETURN result
+
+// Usage
+proxy = new CachingProxy()
+proxy.send("user", "Diwali Sale is LIVE!")   // → real service call
+proxy.send("user", "Diwali Sale is LIVE!")   // → cache thi serve, no DB hit
+proxy.send("user", "Diwali Sale is LIVE!")   // → cache thi serve again
+
+
+================================================================
+  PROXY TYPE 3 — LOGGING PROXY
+  "Kone moklyu, kyare moklyu?" — Audit trail
+  
+  Scenario:
+  Compliance requirement: har notification log thavi joie.
+  Real service ma logging mix nathi karvani — 
+  Logging Proxy handle kare.
+================================================================
+
+CLASS LoggingProxy IMPLEMENTS NotificationService:
+
+    real_service = new RealNotificationService()
+    logs = []                    // list of all calls made
+
+    METHOD send(user_role, message):
+        timestamp = get_current_time()
+
+        // Before call — log attempt
+        log_entry = "timestamp | role: user_role | msg: message"
+        logs.add(log_entry)
+        print "LOG: " + log_entry
+
+        // Forward to real service
+        real_service.send(user_role, message)
+
+        // After call — log success
+        print "LOG: Delivery confirmed at timestamp"
+
+    METHOD get_logs():
+        RETURN logs              // audit ke baad dekh shake
+
+// Usage
+proxy = new LoggingProxy()
+proxy.send("admin", "Server going down at 3AM")
+proxy.send("user",  "Your order shipped!")
+proxy.get_logs()   // → full audit trail
+
+
+================================================================
+  PROXY TYPE 4 — VIRTUAL PROXY (Lazy Initialization)
+  "Jarur padse toh banavo" — Expensive object delay karo
+  
+  Scenario:
+  RealNotificationService start thava ma 3 seconds lagay —
+  DB connect kare, configs load kare, pool warm up kare.
+  
+  App start thay tyare service na banavo — 
+  Pehli vakhat genuinely jarur padse tyare banavo.
+================================================================
+
+CLASS VirtualProxy IMPLEMENTS NotificationService:
+
+    real_service = null          // null — abhi nahi banayo
+
+    METHOD send(user_role, message):
+        IF real_service is null:
+            // First call — tabhi create karo (lazy init)
+            print "VIRTUAL PROXY: Real service create kari raha che..."
+            real_service = new RealNotificationService()   // expensive here
+        
+        // real_service ready che — forward karo
+        real_service.send(user_role, message)
+
+// Usage
+proxy = new VirtualProxy()
+// App start thay — real service nathi banyo abhi — instant startup
+
+// ... kaik time pachhi ...
+proxy.send("user", "Flash sale starts now!")
+// Pehli vakhat call thay tyare j real service bane — 
+// App startup pe koi delay nahi
+
+
+================================================================
+  COMBINING PROXIES — Real world ma layers hoy
+  
+  Real production system ma tame chain kari shake:
+  Caller → LoggingProxy → ProtectionProxy → CachingProxy → RealService
+  
+  Har proxy ek j kaam kare — Single Responsibility intact.
+================================================================
+
+// Layered proxy chain
+real    = new RealNotificationService()
+cached  = new CachingProxy(real)        // cache layer
+guarded = new ProtectionProxy(cached)   // auth layer on top of cache
+logged  = new LoggingProxy(guarded)     // logging on top of everything
+
+// Caller sirf logged sathe vaat kare — chain internally handle thay
+logged.send("admin", "System update deployed")
+// Flow: LoggingProxy → ProtectionProxy → CachingProxy → RealService
+
+
+================================================================
+  USAGE — The Key Insight
+================================================================
+
+// WITHOUT PROXY — Real service ma badhu mix thay
+CLASS MessyRealService:
+    METHOD send(user_role, message):
+        // Logging
+        log("Sending: " + message)
+        // Auth
+        IF user_role != "admin": RETURN "denied"
+        // Cache check
+        IF message IN cache: RETURN cache[message]
+        // Actual work
+        print "Sending notification..."
+        // Problem: Service na 4 responsibilities — koi ek badlav se badhu tute
+
+// WITH PROXY — Har responsibility alag class ma
+RealService      → sirf send karo
+ProtectionProxy  → sirf auth karo  
+CachingProxy     → sirf cache karo
+LoggingProxy     → sirf log karo
+// Ek change karo → sirf te class badlay — baaki untouched
+
+
+================================================================
+  FINAL — Interview Ready
+================================================================
+
+PROXY PATTERN:
+  Gujarati  : "Vachhe man rakho?" — Direct nahi, proxy thi jao
+  One-liner : "Proxy provides a surrogate or placeholder for
+               another object to control access to it."
+  4 Types   : Virtual (lazy create) | Protection (access control) |
+              Caching (avoid repeat) | Logging (audit trail)
+
+KEY POINT  : Proxy ane Real Service — same interface implement kare.
+             Caller ne khabar nathi ke proxy sathe vaat kare che.
+             Real object completely unchanged rahe.
+
+REAL WORLD : API Gateway (protection + logging) |
+             CDN (caching proxy) |
+             ORM lazy loading (virtual proxy) |
+             Bank teller vs vault (protection proxy)
+
+CONFUSION  : Proxy vs Decorator?
+             Decorator = behaviour ADD karo (navi capability)
+             Proxy     = access CONTROL karo (same behaviour, gatekeeper)
+             Decorator object khud banave. Proxy object manage kare.
+
+CONFUSION  : Proxy vs Adapter?
+             Adapter = interface CHANGE karo (incompatible ne fit karo)
+             Proxy   = interface SAME rakho (sirf access control karo)
+================================================================
